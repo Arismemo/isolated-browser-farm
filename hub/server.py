@@ -57,10 +57,14 @@ def get_profile_meta(acc_id):
     if os.path.exists(meta_path):
         try:
             with open(meta_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                if not data.get("name"):
+                    data["name"] = acc_id
+                return data
         except Exception:
             pass
     return {
+        "name": acc_id,
         "group": "默认分组",
         "tags": [],
         "notes": "",
@@ -243,6 +247,7 @@ def get_profiles():
 
         profiles.append({
             "id": acc_id,
+            "name": meta.get("name") or acc_id,
             "container_name": container_name,
             "proxy": proxy_val,
             "timezone": tz_val,
@@ -344,11 +349,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_json_res(400, {"success": False, "error": "缺少账号 ID"})
                 return
             meta = get_profile_meta(acc_id)
+            if "name" in data: meta["name"] = data["name"].strip() or acc_id
             if "group" in data: meta["group"] = data["group"].strip() or "默认分组"
             if "tags" in data: meta["tags"] = data["tags"]
             if "notes" in data: meta["notes"] = data["notes"].strip()
             save_profile_meta(acc_id, meta)
-            self.send_json_res(200, {"success": True, "message": "元数据已更新"})
+            self.send_json_res(200, {"success": True, "message": "资料已更新"})
 
         elif parsed.path == "/api/clipboard/send":
             acc_id = data.get("id", "").strip()
@@ -366,6 +372,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         elif parsed.path == "/api/profiles/add":
             acc_id = data.get("id", "").strip()
+            name = data.get("name", "").strip() or acc_id
             proxy = data.get("proxy", "").strip() or "direct"
             tz = data.get("timezone", "America/New_York").strip()
             group = data.get("group", "默认分组").strip()
@@ -384,12 +391,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             ok, stdout, stderr = run_cmd(cmd)
             if ok:
                 save_profile_meta(acc_id, {
+                    "name": name,
                     "group": group,
                     "tags": tags,
                     "notes": notes,
                     "last_check": None
                 })
-                self.send_json_res(200, {"success": True, "message": f"账号 {acc_id} 创建成功！", "output": stdout})
+                self.send_json_res(200, {"success": True, "message": f"账号 {name} ({acc_id}) 创建成功！", "output": stdout})
             else:
                 self.send_json_res(500, {"success": False, "error": f"创建失败: {stderr or stdout}"})
 

@@ -254,20 +254,69 @@
             line-height: 1;
         }
 
+        .card-title-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
         .card-id {
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 700;
             letter-spacing: -0.01em;
             color: var(--text-primary);
+            cursor: pointer;
+            transition: color 0.15s;
+        }
+
+        .card-id:hover {
+            color: var(--accent);
+        }
+
+        .btn-icon-inline {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            opacity: 0.6;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            line-height: 1;
+            color: var(--text-muted);
+        }
+
+        .btn-icon-inline:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            transform: scale(1.15);
+        }
+
+        .card-sub-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 3px;
+        }
+
+        .card-sub-id {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
         }
 
         .card-group-tag {
             font-size: 11px;
             padding: 2px 8px;
             border-radius: 4px;
-            background: rgba(255, 255, 255, 0.06);
-            color: var(--text-muted);
-            border: 1px solid var(--border-color);
+            background: rgba(99, 102, 241, 0.12);
+            color: #a5b4fc;
+            border: 1px solid rgba(99, 102, 241, 0.25);
         }
 
         .status-badge {
@@ -561,10 +610,15 @@
                 <h3 class="modal-title">创建独立隔离浏览器环境</h3>
                 <button class="modal-close" onclick="closeAddModal()">&times;</button>
             </div>
+
+            <div class="form-group">
+                <label>Profile 名字 (显示名，支持中文/Emoji)</label>
+                <input type="text" id="new-name" class="form-control" placeholder="如：Google 主力号、TikTok 01 号">
+            </div>
             
             <div class="form-group">
-                <label>账号标识 ID (用于容器名与存储路径)</label>
-                <input type="text" id="new-id" class="form-control" placeholder="如 acc2, tiktok-01, google-main">
+                <label>账号标识 ID (英文/数字，用于容器名与存储路径)</label>
+                <input type="text" id="new-id" class="form-control" placeholder="如 acc2, tiktok_01, google_main">
             </div>
 
             <div class="form-group">
@@ -589,6 +643,43 @@
             <div style="display: flex; gap: 10px; margin-top: 10px;">
                 <button class="btn btn-secondary" onclick="closeAddModal()" style="flex: 1;">取消</button>
                 <button class="btn btn-primary" id="btn-submit-add" onclick="submitAddProfile()" style="flex: 1;">立即创建并部署</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态弹窗：编辑 Profile 资料 -->
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">✏️ 编辑 Profile 资料</h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            
+            <input type="hidden" id="edit-id">
+
+            <div class="form-group">
+                <label>Profile 名字 (显示名，支持中文 / Emoji)</label>
+                <input type="text" id="edit-name" class="form-control" placeholder="例如：我的主号、Google主力、TikTok01">
+            </div>
+
+            <div class="form-group">
+                <label>业务分组 (Tag / Group)</label>
+                <input type="text" id="edit-group" class="form-control" placeholder="例如：默认分组、电商运营、Google业务">
+            </div>
+
+            <div class="form-group">
+                <label>底层容器标识 (系统ID，不可更改)</label>
+                <input type="text" id="edit-id-display" class="form-control" disabled style="opacity: 0.55; cursor: not-allowed;">
+            </div>
+
+            <div class="form-group">
+                <label>账号备注信息 (可选，记录邮箱/用途备忘)</label>
+                <textarea id="edit-notes" class="form-control" rows="2" style="resize: vertical; height: 65px;" placeholder="例如：绑定邮箱 abc@gmail.com，用于海外支付体检"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn btn-secondary" onclick="closeEditModal()" style="flex: 1;">取消</button>
+                <button class="btn btn-primary" id="btn-submit-edit" onclick="submitEditProfile()" style="flex: 1;">💾 保存修改</button>
             </div>
         </div>
     </div>
@@ -675,10 +766,13 @@
 
             const filtered = allProfiles.filter(p => {
                 const matchGroup = (currentGroup === "全部" || p.group === currentGroup);
-                const matchSearch = !search || 
-                    p.id.toLowerCase().includes(search) || 
-                    p.proxy.toLowerCase().includes(search) ||
-                    (p.last_check && (p.last_check.city.toLowerCase().includes(search) || p.last_check.isp.toLowerCase().includes(search)));
+                const matchName = (p.name || '').toLowerCase().includes(search);
+                const matchId = p.id.toLowerCase().includes(search);
+                const matchGroupTag = (p.group && p.group.toLowerCase().includes(search));
+                const matchNotes = (p.notes && p.notes.toLowerCase().includes(search));
+                const matchProxy = p.proxy.toLowerCase().includes(search);
+                const matchGeo = p.last_check && (p.last_check.city.toLowerCase().includes(search) || p.last_check.isp.toLowerCase().includes(search));
+                const matchSearch = !search || matchName || matchId || matchGroupTag || matchNotes || matchProxy || matchGeo;
                 return matchGroup && matchSearch;
             });
 
@@ -687,8 +781,9 @@
                 return;
             }
 
-            container.innerHTML = filtered.map(p => {
+            container.innerHTML = filtered.map((p, idx) => {
                 const isRunning = p.state === 'running';
+                const displayName = p.name || p.id;
                 const flag = p.last_check ? p.last_check.flag : "🇺🇸";
                 const city = p.last_check ? `${p.last_check.city}, ${p.last_check.region}` : p.timezone.split("/")[1] || "New York";
                 const latency = p.last_check ? `${p.last_check.latency_ms} ms` : "--";
@@ -701,8 +796,14 @@
                         <div class="card-id-wrap">
                             <span class="card-flag">${flag}</span>
                             <div>
-                                <div class="card-id">${p.id}</div>
-                                <span class="card-group-tag">${p.group || '默认分组'}</span>
+                                <div class="card-title-row">
+                                    <span class="card-id" title="点击编辑 Profile 名字" onclick="openEditModal('${p.id}')">${displayName}</span>
+                                    <button class="btn-icon-inline" title="编辑名称与资料" onclick="openEditModal('${p.id}')">✏️</button>
+                                </div>
+                                <div class="card-sub-row">
+                                    <span class="card-sub-id" title="底层容器标识: ${p.id}">ID: ${p.id}</span>
+                                    <span class="card-group-tag">${p.group || '默认分组'}</span>
+                                </div>
                             </div>
                         </div>
                         <span class="status-badge ${isRunning ? 'running' : 'stopped'}">
@@ -736,6 +837,7 @@
                             <button class="btn btn-primary" onclick="openAndActivateProfile('${p.id}', '${p.external_url || ('https://' + window.location.hostname + ':' + (p.external_port || (28443 + idx)))}')">🚀 启动并打开</button>
                         `}
                         <button class="btn btn-secondary" title="一键体检测速" onclick="probeProfile('${p.id}')">⚡ 体检</button>
+                        <button class="btn btn-secondary" title="编辑资料与名称" onclick="openEditModal('${p.id}')">✏️</button>
                         <button class="btn btn-secondary" title="云剪贴板" onclick="openClipboardModal('${p.id}')">📋</button>
                         <button class="btn btn-secondary" title="备份下载" onclick="backupProfile('${p.id}')">📦</button>
                         <button class="btn btn-secondary btn-danger-ghost" title="删除环境" onclick="deleteProfile('${p.id}')">🗑️</button>
@@ -805,6 +907,7 @@
 
         // 提交新增
         async function submitAddProfile() {
+            const name = document.getElementById('new-name').value.trim();
             const id = document.getElementById('new-id').value.trim();
             const group = document.getElementById('new-group').value.trim();
             const proxy = document.getElementById('new-proxy').value.trim();
@@ -823,7 +926,7 @@
                 const res = await fetch('/api/profiles/add', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({id, group, proxy, timezone: tz})
+                    body: JSON.stringify({id, name, group, proxy, timezone: tz})
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -837,6 +940,59 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = "立即创建并部署";
+            }
+        }
+
+        // 打开编辑 Profile 资料弹窗
+        function openEditModal(id) {
+            const p = allProfiles.find(item => item.id === id);
+            if (!p) return;
+            document.getElementById('edit-id').value = p.id;
+            document.getElementById('edit-id-display').value = p.id;
+            document.getElementById('edit-name').value = p.name || p.id;
+            document.getElementById('edit-group').value = p.group || "默认分组";
+            document.getElementById('edit-notes').value = p.notes || "";
+            document.getElementById('edit-modal').classList.add('active');
+            setTimeout(() => {
+                const input = document.getElementById('edit-name');
+                input.focus();
+                input.select();
+            }, 60);
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.remove('active');
+        }
+
+        // 提交 Profile 修改
+        async function submitEditProfile() {
+            const id = document.getElementById('edit-id').value;
+            const name = document.getElementById('edit-name').value.trim();
+            const group = document.getElementById('edit-group').value.trim() || "默认分组";
+            const notes = document.getElementById('edit-notes').value.trim();
+
+            const btn = document.getElementById('btn-submit-edit');
+            btn.textContent = "保存中...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/profiles/update-meta', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id, name, group, notes})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeEditModal();
+                    await fetchAllProfiles();
+                } else {
+                    alert("保存失败: " + (data.error || data.message));
+                }
+            } catch (err) {
+                alert("请求异常: " + err.message);
+            } finally {
+                btn.textContent = "💾 保存修改";
+                btn.disabled = false;
             }
         }
 
