@@ -322,7 +322,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if not os.path.exists(add_script):
                 add_script = os.path.join(BASE_DIR, "add-profile.sh")
 
-            cmd = f"{add_script} {acc_id} '{proxy}' '{tz}'"
+            cmd = f"HUB_DOMAIN='{DOMAIN}' {add_script} {acc_id} '{proxy}' '{tz}'"
             ok, stdout, stderr = run_cmd(cmd)
             if ok:
                 save_profile_meta(acc_id, {

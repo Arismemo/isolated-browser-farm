@@ -14,17 +14,37 @@ ACC_ID="$1"
 PROXY_STR="$2"
 TZ_VAL="${3:-America/New_York}"
 
-# 基础目录探测
+# 基础目录智能探测
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ -n "${BROWSER_FARM_DIR:-}" ] && [ -d "$BROWSER_FARM_DIR" ]; then
+    BASE_DIR="$BROWSER_FARM_DIR"
+elif [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
+    BASE_DIR="$SCRIPT_DIR"
+elif [ -f "$SCRIPT_DIR/../docker-compose.yml" ]; then
+    BASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+    BASE_DIR="/root/j/browsers"
+fi
 ACC_DIR="$BASE_DIR/profiles/$ACC_ID"
 
-# 读取域名配置
-DOMAIN="localhost"
-if [ -f "$BASE_DIR/.env" ]; then
-    DOMAIN=$(grep -E '^HUB_DOMAIN=' "$BASE_DIR/.env" | cut -d'=' -f2 | tr -d '"' | tr -d "'" || echo "localhost")
+# 读取域名配置 (多重自愈探测)
+DOMAIN="${HUB_DOMAIN:-}"
+if [ -z "$DOMAIN" ] && [ -f "$BASE_DIR/.env" ]; then
+    DOMAIN=$(grep -E '^HUB_DOMAIN=' "$BASE_DIR/.env" | cut -d'=' -f2 | tr -d '"' | tr -d "'" || true)
 fi
-DOMAIN="${HUB_DOMAIN:-$DOMAIN}"
+if [ -z "$DOMAIN" ] || [ "$DOMAIN" = "localhost" ]; then
+    NGINX_DOMAIN=$(grep -rhoE 'server_name [^;]+' /etc/nginx/sites-available/browser-* 2>/dev/null | awk '{print $2}' | grep -v 'localhost' | head -n 1 || true)
+    if [ -n "$NGINX_DOMAIN" ]; then
+        DOMAIN="$NGINX_DOMAIN"
+    fi
+fi
+if [ -z "$DOMAIN" ] || [ "$DOMAIN" = "localhost" ]; then
+    REAL_CERT=$(ls -1 /etc/letsencrypt/live/ 2>/dev/null | grep -v 'README' | head -n 1 || true)
+    if [ -n "$REAL_CERT" ]; then
+        DOMAIN="$REAL_CERT"
+    fi
+fi
+DOMAIN="${DOMAIN:-localhost}"
 
 mkdir -p "$ACC_DIR/.config/labwc"
 
