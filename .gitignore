@@ -1,0 +1,15 @@
+# 敏感信息与配置
+.env
+*.env
+!*.example.env
+.browser_htpasswd
+
+# 运行时数据与浏览器 Profile
+profiles/
+*.log
+relay.log
+
+# 临时与系统文件
+__pycache__/
+*.pyc
+.DS_Store

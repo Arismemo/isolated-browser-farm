@@ -1,0 +1,12 @@
+[Unit]
+Description=Block WebRTC UDP leak for Docker browsers
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c "iptables -C DOCKER-USER -s 172.21.0.0/16 -p udp -m udp ! --dport 53 -j DROP 2>/dev/null || iptables -I DOCKER-USER -s 172.21.0.0/16 -p udp -m udp ! --dport 53 -j DROP"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
