@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "GPU & Hardware Fingerprint Shield",
+  "version": "1.0",
+  "description": "Hardware and WebGL fingerprint spoofing shield for isolated browser containers",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    }
+  ]
+}

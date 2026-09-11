@@ -28,20 +28,26 @@ DOMAIN="${HUB_DOMAIN:-$DOMAIN}"
 
 mkdir -p "$ACC_DIR/.config/labwc"
 
-# 自动分发持久化商业字体
+# 1. 自动分发持久化商业字体
 if [ -d "$BASE_DIR/common_fonts" ]; then
     mkdir -p "$ACC_DIR/.fonts"
     cp -r "$BASE_DIR/common_fonts"/* "$ACC_DIR/.fonts/"
 fi
 
-# 1. 计算内部端口与外部端口
+# 2. 自动分发 WebGL 显卡指纹掩码扩展
+if [ -d "$BASE_DIR/common_extensions/webgl-mask" ]; then
+    mkdir -p "$ACC_DIR/extensions/webgl-mask"
+    cp -r "$BASE_DIR/common_extensions/webgl-mask"/* "$ACC_DIR/extensions/webgl-mask/"
+fi
+
+# 3. 计算内部端口与外部端口
 LAST_INTERNAL_PORT=$(grep -oE "127\.0\.0\.1:[0-9]+:3000" "$BASE_DIR/docker-compose.yml" 2>/dev/null | cut -d":" -f2 | sort -n | tail -n 1 || true)
 NEW_INTERNAL_PORT=$(( ${LAST_INTERNAL_PORT:-3000} + 1 ))
 
 LAST_EXTERNAL_PORT=$(grep -oE "listen [0-9]+ ssl" /etc/nginx/sites-available/browser-* 2>/dev/null | awk "{print \$2}" | sort -n | tail -n 1 || true)
 NEW_EXTERNAL_PORT=$(( ${LAST_EXTERNAL_PORT:-28442} + 1 ))
 
-# 2. 生成代理及本地免密 Relay
+# 4. 生成代理及本地免密 Relay
 RELAY_PORT=$(( 18880 + (NEW_INTERNAL_PORT % 1000) ))
 if [ "$PROXY_STR" = "direct" ]; then
     PROXY_PARAM=""
@@ -146,7 +152,7 @@ fi
 chmod +x "$ACC_DIR/.config/labwc/autostart"
 chown -R 1000:1000 "$ACC_DIR"
 
-# 3. 追加容器到 docker-compose.yml
+# 5. 追加容器到 docker-compose.yml (注入显卡掩码扩展与WebRTC防火墙盾参数)
 cat >> "$BASE_DIR/docker-compose.yml" << ENTRY_EOF
 
   # 账号 $ACC_ID
@@ -158,7 +164,7 @@ cat >> "$BASE_DIR/docker-compose.yml" << ENTRY_EOF
       - PGID=1000
       - TZ=$TZ_VAL
       - TITLE=Google-Account-$ACC_ID
-      - CHROME_CLI=https://accounts.google.com --no-first-run --lang=en-US $PROXY_PARAM --force-webrtc-ip-handling-policy=disable_non_proxied_udp --disable-blink-features=AutomationControlled
+      - CHROME_CLI=https://accounts.google.com --no-first-run --lang=en-US $PROXY_PARAM --force-webrtc-ip-handling-policy=disable_non_proxied_udp --disable-blink-features=AutomationControlled --load-extension=/config/extensions/webgl-mask
     volumes:
       - ./profiles/$ACC_ID:/config
     ports:
@@ -167,7 +173,7 @@ cat >> "$BASE_DIR/docker-compose.yml" << ENTRY_EOF
     restart: unless-stopped
 ENTRY_EOF
 
-# 4. 配置 Nginx SSL 反代与身份认证
+# 6. 配置 Nginx SSL 反代与身份认证
 CERT_PATH="/etc/letsencrypt/live/$DOMAIN"
 SSL_CONF="/etc/nginx/sites-available/browser-$ACC_ID.$DOMAIN"
 
@@ -204,7 +210,7 @@ ln -sf "$SSL_CONF" "/etc/nginx/sites-enabled/browser-$ACC_ID.$DOMAIN"
 nginx -t >/dev/null
 nginx -s reload
 
-# 5. 防火墙与启动容器
+# 7. 防火墙与启动容器
 if command -v ufw >/dev/null 2>&1; then
     ufw allow "$NEW_EXTERNAL_PORT/tcp" comment "Remote Browser $ACC_ID" >/dev/null 2>&1 || true
 fi

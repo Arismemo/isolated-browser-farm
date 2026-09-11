@@ -1,646 +1,921 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Browser Hub - 云端隔离浏览器控制台</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #0b0f19;
-      --card-bg: rgba(17, 24, 39, 0.75);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --accent: #6366f1;
-      --accent-hover: #4f46e5;
-      --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --success: #10b981;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --surface: #1e293b;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Isolated Browser Farm - 隔离浏览器中继控制台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0d14;
+            --bg-secondary: #121824;
+            --bg-card: rgba(22, 30, 46, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(99, 102, 241, 0.4);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.25);
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.2);
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --radius: 14px;
+        }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
 
-    body {
-      background-color: var(--bg);
-      background-image: 
-        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.1) 0px, transparent 50%);
-      color: var(--text);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      min-height: 100vh;
-      padding-bottom: 60px;
-    }
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 15% 10%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 90%, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
 
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 32px 24px;
-    }
+        /* 顶部导航 */
+        header {
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(10, 13, 20, 0.85);
+            backdrop-filter: blur(16px);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
 
-    /* Header */
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 40px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid var(--card-border);
-    }
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
 
-    .logo-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      background: var(--accent-gradient);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
-      box-shadow: 0 8px 20px -4px rgba(99, 102, 241, 0.4);
-    }
+        .brand-logo {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #6366f1, #3b82f6);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
 
-    .brand h1 {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
+        .brand-title {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
 
-    .brand p {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
+        .brand-badge {
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
 
-    .actions {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
+        .nav-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
 
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: all 0.2s ease;
-      text-decoration: none;
-    }
+        /* 统计看板 */
+        .stats-grid {
+            max-width: 1400px;
+            margin: 28px auto 0;
+            padding: 0 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            width: 100%;
+        }
 
-    .btn-primary {
-      background: var(--accent-gradient);
-      color: #fff;
-      box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39);
-    }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
 
-    .btn-primary:hover {
-      opacity: 0.92;
-      transform: translateY(-1px);
-    }
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
 
-    .btn-secondary {
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--card-border);
-    }
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-primary);
+        }
 
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.08);
-    }
+        /* 过滤与搜索工具栏 */
+        .toolbar {
+            max-width: 1400px;
+            margin: 24px auto 0;
+            padding: 0 24px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
 
-    .btn-sm {
-      padding: 6px 12px;
-      font-size: 12px;
-      border-radius: 6px;
-    }
+        .groups-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
 
-    .btn-danger-ghost {
-      background: transparent;
-      color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.2);
-    }
+        .group-pill {
+            padding: 6px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
 
-    .btn-danger-ghost:hover {
-      background: rgba(239, 68, 68, 0.12);
-    }
+        .group-pill:hover {
+            border-color: var(--text-muted);
+            color: var(--text-primary);
+        }
 
-    /* Stats Bar */
-    .stats-bar {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 32px;
-    }
+        .group-pill.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
 
-    .stat-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
-      padding: 18px 20px;
-      backdrop-filter: blur(12px);
-    }
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 6px 14px;
+            gap: 8px;
+            min-width: 260px;
+        }
 
-    .stat-label {
-      font-size: 13px;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
+        .search-box input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 13px;
+            width: 100%;
+        }
 
-    .stat-value {
-      font-size: 24px;
-      font-weight: 700;
-      margin-top: 6px;
-      color: var(--text);
-    }
+        /* 主体列表 */
+        main {
+            max-width: 1400px;
+            margin: 20px auto 40px;
+            padding: 0 24px;
+            width: 100%;
+            flex: 1;
+        }
 
-    /* Grid */
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-      gap: 24px;
-    }
+        .profiles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 20px;
+        }
 
-    .profile-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 18px;
-      padding: 24px;
-      backdrop-filter: blur(16px);
-      transition: all 0.25s ease;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      position: relative;
-      overflow: hidden;
-    }
+        .profile-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 22px;
+            backdrop-filter: blur(12px);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+        }
 
-    .profile-card:hover {
-      border-color: rgba(99, 102, 241, 0.35);
-      transform: translateY(-2px);
-      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
-    }
+        .profile-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
 
-    .card-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 16px;
-    }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
 
-    .card-title-area {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+        .card-id-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
 
-    .profile-name {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-    }
+        .card-flag {
+            font-size: 24px;
+            line-height: 1;
+        }
 
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-    }
+        .card-id {
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: var(--text-primary);
+        }
 
-    .status-up {
-      background: rgba(16, 185, 129, 0.12);
-      color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.25);
-    }
+        .card-group-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
 
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentColor;
-    }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
 
-    .status-up .status-dot {
-      box-shadow: 0 0 8px #34d399;
-      animation: pulse 2s infinite;
-    }
+        .status-badge.running {
+            background: rgba(16, 185, 129, 0.12);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
 
-    .status-down {
-      background: rgba(148, 163, 184, 0.12);
-      color: #94a3b8;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-    }
+        .status-badge.stopped {
+            background: rgba(239, 68, 68, 0.12);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: currentColor;
+        }
 
-    .info-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 24px;
-      font-size: 13px;
-    }
+        /* 纯净度与网络体检看板 */
+        .health-box {
+            background: rgba(10, 13, 20, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 12px;
+        }
 
-    .info-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+        .health-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .info-label {
-      color: var(--text-muted);
-    }
+        .health-row .label {
+            color: var(--text-muted);
+        }
 
-    .info-val {
-      color: #e2e8f0;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      max-width: 220px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      background: rgba(255, 255, 255, 0.04);
-      padding: 2px 8px;
-      border-radius: 4px;
-    }
+        .health-row .value {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
 
-    .card-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding-top: 18px;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-    }
+        .isp-badge {
+            color: #38bdf8;
+            font-weight: 600;
+        }
 
-    .launch-btn {
-      width: 100%;
-      padding: 12px;
-      background: var(--accent-gradient);
-      color: #fff;
-      font-weight: 600;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      text-decoration: none;
-      box-shadow: 0 4px 12px -2px rgba(99, 102, 241, 0.35);
-      transition: all 0.2s;
-    }
+        .latency-badge {
+            color: #a78bfa;
+            font-weight: 600;
+        }
 
-    .launch-btn:hover {
-      opacity: 0.95;
-      transform: scale(1.01);
-    }
+        /* 按钮与操作条 */
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+            padding-top: 6px;
+        }
 
-    .secondary-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-    }
+        .btn {
+            border: none;
+            outline: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
 
-    /* Modal */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            flex: 1;
+            box-shadow: 0 2px 8px var(--success-glow);
+        }
 
-    .modal-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
 
-    .modal-card {
-      background: #131b2e;
-      border: 1px solid var(--card-border);
-      border-radius: 20px;
-      width: 100%;
-      max-width: 480px;
-      padding: 30px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
-      transform: scale(0.95);
-      transition: transform 0.2s;
-    }
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
 
-    .modal-overlay.active .modal-card {
-      transform: scale(1);
-    }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            border-color: var(--border-hover);
+        }
 
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-    }
+        .btn-danger-ghost:hover {
+            color: var(--danger);
+            border-color: rgba(239, 68, 68, 0.4);
+            background: rgba(239, 68, 68, 0.08);
+        }
 
-    .modal-title {
-      font-size: 18px;
-      font-weight: 700;
-    }
+        /* 模态弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
 
-    .close-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 20px;
-      cursor: pointer;
-    }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
 
-    .form-group {
-      margin-bottom: 18px;
-    }
+        .modal-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 520px;
+            padding: 28px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
 
-    .form-label {
-      display: block;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-muted);
-      margin-bottom: 8px;
-    }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .form-control {
-      width: 100%;
-      padding: 10px 14px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--card-border);
-      color: #fff;
-      font-size: 14px;
-      outline: none;
-      font-family: inherit;
-    }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+        }
 
-    .form-control:focus {
-      border-color: var(--accent);
-      background: rgba(255, 255, 255, 0.08);
-    }
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+        }
 
-    .form-hint {
-      font-size: 12px;
-      color: #64748b;
-      margin-top: 6px;
-    }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
 
-    .empty-state {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--text-muted);
-    }
-  </style>
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .form-control {
+            background: rgba(10, 13, 20, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent);
+        }
+
+        .probe-preview {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            display: none;
+        }
+
+        /* 剪贴板工具模态窗 */
+        .clipboard-box textarea {
+            width: 100%;
+            height: 120px;
+            background: rgba(10, 13, 20, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            resize: vertical;
+            outline: none;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="container">
+    <!-- 顶部导航 -->
     <header>
-      <div class="brand">
-        <div class="logo-icon">🌐</div>
-        <div>
-          <h1>Browser Hub</h1>
-          <p>海外多账号隔离云端浏览器管理平台</p>
+        <div class="nav-container">
+            <div class="brand">
+                <div class="brand-logo">🌐</div>
+                <span class="brand-title">Isolated Browser Farm</span>
+                <span class="brand-badge">Enterprise v2.0</span>
+            </div>
+            <div class="nav-actions">
+                <button class="btn btn-secondary" onclick="fetchAllProfiles()">🔄 刷新列表</button>
+                <button class="btn btn-primary" onclick="openAddModal()">＋ 新增 Profile</button>
+            </div>
         </div>
-      </div>
-      <div class="actions">
-        <button class="btn btn-secondary" onclick="loadProfiles()">🔄 刷新</button>
-        <button class="btn btn-primary" onclick="openAddModal()">＋ 新建环境</button>
-      </div>
     </header>
 
-    <div class="stats-bar">
-      <div class="stat-card">
-        <div class="stat-label">运行中实例</div>
-        <div class="stat-value" id="active-count">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">总隔离环境数</div>
-        <div class="stat-value" id="total-count">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">统一访问密码</div>
-        <div class="stat-value" style="font-size: 16px; font-family: 'JetBrains Mono'; margin-top: 12px;">mm (用户: liukun)</div>
-      </div>
-    </div>
-
-    <div class="grid" id="profile-grid">
-      <!-- 动态插入各卡片 -->
-    </div>
-  </div>
-
-  <!-- 新增 Profile 模态框 -->
-  <div class="modal-overlay" id="add-modal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <div class="modal-title">创建新浏览器环境</div>
-        <button class="close-btn" onclick="closeAddModal()">&times;</button>
-      </div>
-      <form id="add-form" onsubmit="submitAdd(event)">
-        <div class="form-group">
-          <label class="form-label">账号标识 (ID)</label>
-          <input type="text" id="acc-id" class="form-control" placeholder="例如 acc2, google_dev 等" required pattern="[a-zA-Z0-9_-]+">
-          <div class="form-hint">仅允许英文、数字、下划线及减号</div>
+    <!-- 统计看板 -->
+    <section class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-label">运行中 Profile 数量</span>
+            <span class="stat-value" id="stat-active">0 / 0</span>
         </div>
-        <div class="form-group">
-          <label class="form-label">出口代理 (Proxy)</label>
-          <input type="text" id="acc-proxy" class="form-control" placeholder="IP:Port:User:Pass 或 direct">
-          <div class="form-hint">留空或填 direct 表示直接使用 VPS 本机网络</div>
+        <div class="stat-card">
+            <span class="stat-label">真实静态住宅 IP 占比</span>
+            <span class="stat-value" id="stat-residential" style="color: #34d399;">-- %</span>
         </div>
-        <div class="form-group">
-          <label class="form-label">环境时区 (Timezone)</label>
-          <select id="acc-tz" class="form-control">
-            <option value="America/New_York">America/New_York (美国东部)</option>
-            <option value="America/Los_Angeles">America/Los_Angeles (美国西部)</option>
-            <option value="America/Chicago">America/Chicago (美国中部)</option>
-            <option value="Europe/London">Europe/London (英国伦敦)</option>
-            <option value="Asia/Tokyo">Asia/Tokyo (日本东京)</option>
-            <option value="Asia/Singapore">Asia/Singapore (新加坡)</option>
-          </select>
+        <div class="stat-card">
+            <span class="stat-label">业务隔离分组</span>
+            <span class="stat-value" id="stat-groups">1 个</span>
         </div>
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
-          <button type="button" class="btn btn-secondary" onclick="closeAddModal()">取消</button>
-          <button type="submit" class="btn btn-primary" id="submit-btn">立即创建</button>
+        <div class="stat-card">
+            <span class="stat-label">底层 WebRTC 盾</span>
+            <span class="stat-value" style="color: #38bdf8;">100% 阻断</span>
         </div>
-      </form>
-    </div>
-  </div>
+    </section>
 
-  <script>
-    async function loadProfiles() {
-      try {
-        const res = await fetch('/api/profiles');
-        const data = await res.json();
-        if (data.success) {
-          renderGrid(data.profiles);
-        }
-      } catch (err) {
-        console.error('加载 profiles 失败:', err);
-      }
-    }
+    <!-- 过滤与搜索工具栏 -->
+    <section class="toolbar">
+        <div class="groups-bar" id="groups-container">
+            <div class="group-pill active" onclick="filterByGroup('全部')">全部</div>
+        </div>
+        <div class="search-box">
+            <span>🔍</span>
+            <input type="text" id="search-input" placeholder="搜索账号 ID、IP、城市或分组..." oninput="handleSearch()">
+        </div>
+    </section>
 
-    function renderGrid(profiles) {
-      const grid = document.getElementById('profile-grid');
-      const activeCount = profiles.filter(p => p.state === 'running').length;
-      document.getElementById('active-count').textContent = activeCount;
-      document.getElementById('total-count').textContent = profiles.length;
+    <!-- Profile 卡片容器 -->
+    <main>
+        <div class="profiles-grid" id="profiles-container">
+            <div style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-muted);">
+                正在加载云端隔离浏览器集群...
+            </div>
+        </div>
+    </main>
 
-      if (!profiles.length) {
-        grid.innerHTML = '<div class="empty-state">暂无浏览器环境，点击右上角新建</div>';
-        return;
-      }
-
-      grid.innerHTML = profiles.map(p => {
-        const isRunning = p.state === 'running';
-        return `
-          <div class="profile-card">
-            <div>
-              <div class="card-top">
-                <div class="card-title-area">
-                  <div class="profile-name">Google #${p.id}</div>
-                </div>
-                <div class="status-badge ${isRunning ? 'status-up' : 'status-down'}">
-                  <div class="status-dot"></div>
-                  ${isRunning ? '运行中' : '已停止'}
-                </div>
-              </div>
-
-              <div class="info-list">
-                <div class="info-row">
-                  <span class="info-label">绑定代理</span>
-                  <span class="info-val" title="${p.proxy}">${p.proxy}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">环境时区</span>
-                  <span class="info-val">${p.timezone}</span>
-                </div>
-                <div class="info-row">
-                  <span class="info-label">外网访问端口</span>
-                  <span class="info-val">${p.external_port || '未映射'}</span>
-                </div>
-              </div>
+    <!-- 模态弹窗：新增 Profile -->
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">创建独立隔离浏览器环境</h3>
+                <button class="modal-close" onclick="closeAddModal()">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label>账号标识 ID (用于容器名与存储路径)</label>
+                <input type="text" id="new-id" class="form-control" placeholder="如 acc2, tiktok-01, google-main">
             </div>
 
-            <div class="card-actions">
-              ${p.external_url ? `
-                <a href="${p.external_url}" target="_blank" class="launch-btn">
-                  <span>🚀 打开浏览器桌面</span>
-                </a>
-              ` : `
-                <button class="launch-btn" disabled style="opacity: 0.5;">未配置访问端口</button>
-              `}
-              <div class="secondary-actions">
-                ${isRunning ? `
-                  <button class="btn btn-secondary btn-sm" onclick="doAction('${p.id}', 'restart')">重启</button>
-                  <button class="btn btn-secondary btn-sm" onclick="doAction('${p.id}', 'stop')">停止</button>
-                ` : `
-                  <button class="btn btn-secondary btn-sm" onclick="doAction('${p.id}', 'start')">启动</button>
-                `}
-                <button class="btn btn-danger-ghost btn-sm" onclick="confirmDelete('${p.id}')">删除</button>
-              </div>
+            <div class="form-group">
+                <label>业务分组 (Tag / Group)</label>
+                <input type="text" id="new-group" class="form-control" placeholder="如 Google 矩阵, 跨境电商, 社媒营销" value="默认分组">
             </div>
-          </div>
-        `;
-      }).join('');
-    }
 
-    async function doAction(id, action) {
-      if (!confirm(`确定要执行 [${action}] 操作吗？`)) return;
-      try {
-        const res = await fetch('/api/profiles/action', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({id, action})
-        });
-        const data = await res.json();
-        if (data.success) {
-          loadProfiles();
-        } else {
-          alert('操作失败: ' + data.error);
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label>静态住宅代理配置</label>
+                    <a href="javascript:void(0)" onclick="probeNewProxy()" style="font-size: 12px; color: #818cf8; text-decoration: none;">⚡ 探测属地与时区</a>
+                </div>
+                <input type="text" id="new-proxy" class="form-control" placeholder="IP:PORT:USER:PASS 或 direct (直连)">
+                <div id="probe-result" class="probe-preview"></div>
+            </div>
+
+            <div class="form-group">
+                <label>系统时区 (已自动由 IP 智能对齐)</label>
+                <input type="text" id="new-tz" class="form-control" value="America/New_York">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn btn-secondary" onclick="closeAddModal()" style="flex: 1;">取消</button>
+                <button class="btn btn-primary" id="btn-submit-add" onclick="submitAddProfile()" style="flex: 1;">立即创建并部署</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态弹窗：云剪贴板互通 -->
+    <div class="modal-overlay" id="clipboard-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">📋 云剪贴板桥接 (<span id="clip-acc-id"></span>)</h3>
+                <button class="modal-close" onclick="closeClipboardModal()">&times;</button>
+            </div>
+            <div class="clipboard-box">
+                <textarea id="clip-text" placeholder="在此粘贴长文本、密码或 Token，点击「发送到云端」后即可在远程浏览器中按 Ctrl+V 粘贴..."></textarea>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" onclick="fetchFromCloud()" style="flex: 1;">⬇️ 从云端读取</button>
+                <button class="btn btn-primary" onclick="sendToCloud()" style="flex: 1;">⬆️ 发送到云端</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allProfiles = [];
+        let currentGroup = "全部";
+        let activeClipId = "";
+
+        async function fetchAllProfiles() {
+            try {
+                const res = await fetch('/api/profiles');
+                const data = await res.json();
+                if (data.success) {
+                    allProfiles = data.profiles;
+                    renderGroups(data.groups);
+                    renderProfiles();
+                    updateStats();
+                }
+            } catch (err) {
+                console.error("加载失败:", err);
+            }
         }
-      } catch (err) {
-        alert('请求异常: ' + err);
-      }
-    }
 
-    async function confirmDelete(id) {
-      if (!confirm(`⚠️ 警告: 确定要彻底删除环境 [${id}] 吗？该账号的所有 Cookie 和缓存将被清理！`)) return;
-      doAction(id, 'delete');
-    }
-
-    function openAddModal() {
-      document.getElementById('add-modal').classList.add('active');
-    }
-
-    function closeAddModal() {
-      document.getElementById('add-modal').classList.remove('active');
-      document.getElementById('add-form').reset();
-    }
-
-    async function submitAdd(e) {
-      e.preventDefault();
-      const id = document.getElementById('acc-id').value.trim();
-      const proxy = document.getElementById('acc-proxy').value.trim();
-      const timezone = document.getElementById('acc-tz').value;
-      const btn = document.getElementById('submit-btn');
-
-      btn.disabled = true;
-      btn.textContent = '正在构建环境并放行端口...';
-
-      try {
-        const res = await fetch('/api/profiles/add', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({id, proxy, timezone})
-        });
-        const data = await res.json();
-        if (data.success) {
-          closeAddModal();
-          loadProfiles();
-        } else {
-          alert('创建失败: ' + data.error);
+        function renderGroups(groups) {
+            const container = document.getElementById('groups-container');
+            container.innerHTML = groups.map(g => `
+                <div class="group-pill ${g === currentGroup ? 'active' : ''}" onclick="filterByGroup('${g}')">${g}</div>
+            `).join('');
         }
-      } catch (err) {
-        alert('网络错误: ' + err);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = '立即创建';
-      }
-    }
 
-    // 初始加载与定时轮询
-    loadProfiles();
-    setInterval(loadProfiles, 8000);
-  </script>
+        function filterByGroup(group) {
+            currentGroup = group;
+            document.querySelectorAll('.group-pill').forEach(el => {
+                el.classList.toggle('active', el.textContent.trim() === group);
+            });
+            renderProfiles();
+        }
+
+        function handleSearch() {
+            renderProfiles();
+        }
+
+        function updateStats() {
+            const total = allProfiles.length;
+            const running = allProfiles.filter(p => p.state === 'running').length;
+            document.getElementById('stat-active').textContent = `${running} / ${total}`;
+
+            let resCount = 0;
+            allProfiles.forEach(p => {
+                if (p.last_check && p.last_check.type && p.last_check.type.includes("Residential")) {
+                    resCount++;
+                } else if (p.proxy && p.proxy !== "直连 (无二级代理)") {
+                    resCount++;
+                }
+            });
+            const ratio = total > 0 ? Math.round((resCount / total) * 100) : 100;
+            document.getElementById('stat-residential').textContent = `${ratio}%`;
+
+            const uniqueGroups = new Set(allProfiles.map(p => p.group || "默认分组"));
+            document.getElementById('stat-groups').textContent = `${uniqueGroups.size} 个`;
+        }
+
+        function renderProfiles() {
+            const container = document.getElementById('profiles-container');
+            const search = document.getElementById('search-input').value.toLowerCase().trim();
+
+            const filtered = allProfiles.filter(p => {
+                const matchGroup = (currentGroup === "全部" || p.group === currentGroup);
+                const matchSearch = !search || 
+                    p.id.toLowerCase().includes(search) || 
+                    p.proxy.toLowerCase().includes(search) ||
+                    (p.last_check && (p.last_check.city.toLowerCase().includes(search) || p.last_check.isp.toLowerCase().includes(search)));
+                return matchGroup && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-muted);">暂无匹配的浏览器环境</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(p => {
+                const isRunning = p.state === 'running';
+                const flag = p.last_check ? p.last_check.flag : "🇺🇸";
+                const city = p.last_check ? `${p.last_check.city}, ${p.last_check.region}` : p.timezone.split("/")[1] || "New York";
+                const latency = p.last_check ? `${p.last_check.latency_ms} ms` : "--";
+                const isp = p.last_check ? p.last_check.isp : "Comcast / 静态住宅";
+                const netType = p.last_check ? p.last_check.type : "Residential ISP (住宅宽带)";
+
+                return `
+                <div class="profile-card">
+                    <div class="card-header">
+                        <div class="card-id-wrap">
+                            <span class="card-flag">${flag}</span>
+                            <div>
+                                <div class="card-id">${p.id}</div>
+                                <span class="card-group-tag">${p.group || '默认分组'}</span>
+                            </div>
+                        </div>
+                        <span class="status-badge ${isRunning ? 'running' : 'stopped'}">
+                            <span class="status-dot"></span>
+                            ${isRunning ? '运行中' : '已停止'}
+                        </span>
+                    </div>
+
+                    <!-- 纯净度体检看板 -->
+                    <div class="health-box">
+                        <div class="health-row">
+                            <span class="label">属地 / 城市</span>
+                            <span class="value">${city}</span>
+                        </div>
+                        <div class="health-row">
+                            <span class="label">运营商 (ISP)</span>
+                            <span class="value isp-badge">${isp}</span>
+                        </div>
+                        <div class="health-row">
+                            <span class="label">延迟 / 属性</span>
+                            <span class="value latency-badge">⚡ ${latency} · ${netType}</span>
+                        </div>
+                    </div>
+
+                    <!-- 操作工具栏 -->
+                    <div class="card-actions">
+                        ${isRunning && p.external_url ? `
+                            <a href="${p.external_url}" target="_blank" class="btn btn-primary">🚀 打开</a>
+                        ` : `
+                            <button class="btn btn-secondary" onclick="controlProfile('${p.id}', 'start')">▶️ 启动</button>
+                        `}
+                        <button class="btn btn-secondary" title="一键体检测速" onclick="probeProfile('${p.id}')">⚡ 体检</button>
+                        <button class="btn btn-secondary" title="云剪贴板" onclick="openClipboardModal('${p.id}')">📋</button>
+                        <button class="btn btn-secondary" title="备份下载" onclick="backupProfile('${p.id}')">📦</button>
+                        <button class="btn btn-secondary btn-danger-ghost" title="删除环境" onclick="deleteProfile('${p.id}')">🗑️</button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // 一键测速体检
+        async function probeProfile(accId) {
+            const btn = event.currentTarget;
+            btn.textContent = "⏳...";
+            try {
+                const res = await fetch('/api/proxy/probe', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: accId})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    await fetchAllProfiles();
+                } else {
+                    alert("体检失败: " + data.error);
+                }
+            } catch (e) {
+                alert("网络超时");
+            } finally {
+                btn.textContent = "⚡ 体检";
+            }
+        }
+
+        // 新增弹窗中的代理智能探测
+        async function probeNewProxy() {
+            const proxy = document.getElementById('new-proxy').value.trim();
+            const resBox = document.getElementById('probe-result');
+            if (!proxy) {
+                alert("请先输入代理字符串");
+                return;
+            }
+            resBox.style.display = "block";
+            resBox.innerHTML = "⏳ 正在通过该代理向 ipinfo.io 握手体检...";
+
+            try {
+                const res = await fetch('/api/proxy/probe', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({proxy: proxy})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    resBox.innerHTML = `
+                        <b>${data.flag} ${data.city} (${data.country})</b><br>
+                        🏢 运营商: ${data.isp}<br>
+                        ⚡ 延迟: ${data.latency_ms}ms · ${data.type}
+                    `;
+                    if (data.timezone) {
+                        document.getElementById('new-tz').value = data.timezone;
+                    }
+                } else {
+                    resBox.innerHTML = `❌ 探测失败: ${data.error}`;
+                }
+            } catch (e) {
+                resBox.innerHTML = "❌ 请求超时";
+            }
+        }
+
+        // 提交新增
+        async function submitAddProfile() {
+            const id = document.getElementById('new-id').value.trim();
+            const group = document.getElementById('new-group').value.trim();
+            const proxy = document.getElementById('new-proxy').value.trim();
+            const tz = document.getElementById('new-tz').value.trim();
+            const btn = document.getElementById('btn-submit-add');
+
+            if (!id) {
+                alert("请输入账号 ID");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = "正在创建并配置环境...";
+
+            try {
+                const res = await fetch('/api/profiles/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id, group, proxy, timezone: tz})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeAddModal();
+                    await fetchAllProfiles();
+                } else {
+                    alert("创建失败: " + data.error);
+                }
+            } catch (e) {
+                alert("网络超时");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "立即创建并部署";
+            }
+        }
+
+        // 基础控制
+        async function controlProfile(id, action) {
+            const res = await fetch('/api/profiles/action', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id, action})
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchAllProfiles();
+            } else {
+                alert("操作失败: " + data.error);
+            }
+        }
+
+        async function deleteProfile(id) {
+            if (!confirm(`确定要彻底删除账号 [${id}] 及其全部持久化 Cookie 数据吗？此操作不可逆！`)) return;
+            controlProfile(id, 'delete');
+        }
+
+        function backupProfile(id) {
+            window.open(`/api/profiles/backup?id=${id}`, '_blank');
+        }
+
+        // 剪贴板模态窗
+        function openClipboardModal(id) {
+            activeClipId = id;
+            document.getElementById('clip-acc-id').textContent = id;
+            document.getElementById('clip-text').value = '';
+            document.getElementById('clipboard-modal').classList.add('active');
+        }
+
+        function closeClipboardModal() {
+            document.getElementById('clipboard-modal').classList.remove('active');
+        }
+
+        async function sendToCloud() {
+            const text = document.getElementById('clip-text').value;
+            if (!text) {
+                alert("请先输入要发送的文本");
+                return;
+            }
+            const res = await fetch('/api/clipboard/send', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: activeClipId, text})
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert("✅ 已成功注入到云端剪贴板！请直接在远程浏览器窗口内按 Ctrl+V 粘贴。");
+            } else {
+                alert("同步失败");
+            }
+        }
+
+        async function fetchFromCloud() {
+            const res = await fetch(`/api/clipboard/get?id=${activeClipId}`);
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('clip-text').value = data.text || '';
+                if (!data.text) {
+                    alert("云端剪贴板当前为空");
+                }
+            }
+        }
+
+        function openAddModal() {
+            document.getElementById('add-modal').classList.add('active');
+        }
+
+        function closeAddModal() {
+            document.getElementById('add-modal').classList.remove('active');
+        }
+
+        // 初始化
+        fetchAllProfiles();
+        setInterval(fetchAllProfiles, 15000);
+    </script>
 </body>
 </html>
