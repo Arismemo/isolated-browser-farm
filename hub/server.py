@@ -8,6 +8,7 @@ import urllib.parse
 import time
 import io
 import tarfile
+import shutil
 
 PORT = 38080
 BASE_DIR = os.environ.get("BROWSER_FARM_DIR", "/root/j/browsers")
@@ -77,10 +78,32 @@ def save_profile_meta(acc_id, meta):
     except Exception:
         return False
 
+def remove_profile_from_compose(acc_id):
+    compose_file = os.path.join(BASE_DIR, "docker-compose.yml")
+    if not os.path.exists(compose_file):
+        return
+    with open(compose_file, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    pattern = rf"(?m)^\s*(?:#\s*账号\s+{re.escape(acc_id)}\s*\n)?\s*browser-{re.escape(acc_id)}:\s*\n(?:[ \t]+[^\n]*\n)*"
+    new_text = re.sub(pattern, "", text)
+
+    with open(compose_file, "w", encoding="utf-8") as f:
+        f.write(new_text)
+
+def delete_profile_full(acc_id):
+    container = f"browser-{acc_id}"
+    run_cmd(f"docker stop {container} 2>/dev/null; docker rm -f {container} 2>/dev/null")
+    run_cmd(f"rm -f /etc/nginx/sites-enabled/browser-{acc_id}* /etc/nginx/sites-available/browser-{acc_id}* && nginx -s reload 2>/dev/null || true")
+    remove_profile_from_compose(acc_id)
+    profile_dir = os.path.join(BASE_DIR, "profiles", acc_id)
+    if os.path.exists(profile_dir):
+        shutil.rmtree(profile_dir, ignore_errors=True)
+    return True
+
 def probe_proxy_network(proxy_str="", acc_id=""):
     start_t = time.time()
     
-    # 如果已存在容器，优先在容器内发起探测（走容器内部 relay 更加精准）
     if acc_id:
         cmd = f"docker exec browser-{acc_id} curl -s --max-time 8 -x {proxy_str or 'http://127.0.0.1:18888'} https://ipinfo.io/json"
     else:
@@ -353,26 +376,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 ok, out, err = run_cmd(f"docker start {container}")
                 self.send_json_res(200 if ok else 500, {"success": ok, "message": "已启动" if ok else err})
             elif action == "delete":
-                cmd = f"""
-                docker stop {container} 2>/dev/null || true
-                docker rm -f {container} 2>/dev/null || true
-                rm -f /etc/nginx/sites-enabled/browser-{acc_id}* /etc/nginx/sites-available/browser-{acc_id}*
-                nginx -s reload 2>/dev/null || true
-                python3 -c '
-import re
-path = "{BASE_DIR}/docker-compose.yml"
-if os.path.exists(path):
-    with open(path, "r") as f:
-        text = f.read()
-    pattern = r"\\n  # 账号 {acc_id}\\n  browser-{acc_id}:[\\s\\S]*?(?=\\n  # 账号 |\\n\\Z)"
-    new_text = re.sub(pattern, "", text)
-    with open(path, "w") as f:
-        f.write(new_text)
-'
-                rm -rf {BASE_DIR}/profiles/{acc_id}
-                """
-                ok, out, err = run_cmd(cmd)
-                self.send_json_res(200 if ok else 500, {"success": ok, "message": "环境已彻底清除" if ok else err})
+                ok = delete_profile_full(acc_id)
+                self.send_json_res(200, {"success": True, "message": "环境已彻底清除"})
             else:
                 self.send_json_res(400, {"success": False, "error": "不支持的操作指令"})
         else:
