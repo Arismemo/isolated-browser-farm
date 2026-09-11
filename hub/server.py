@@ -407,9 +407,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             elif action == "stop":
                 ok, out, err = run_cmd(f"docker stop {container}")
                 self.send_json_res(200 if ok else 500, {"success": ok, "message": "已停止" if ok else err})
-            elif action == "start":
+            elif action == "start" or action == "activate":
+                # 针对 1C2G 极限制环境：保证同时只运行当前 1 个活动浏览器，自动暂停其他浏览器以保护宿主机
+                profiles, _ = get_profiles()
+                for p in profiles:
+                    if p["id"] != acc_id and p["state"] == "running":
+                        run_cmd(f"docker stop {p['container_name']}")
                 ok, out, err = run_cmd(f"docker start {container}")
-                self.send_json_res(200 if ok else 500, {"success": ok, "message": "已启动" if ok else err})
+                self.send_json_res(200 if ok else 500, {"success": ok, "message": "已激活当前环境" if ok else err})
             elif action == "delete":
                 ok = delete_profile_full(acc_id)
                 self.send_json_res(200, {"success": True, "message": "环境已彻底清除"})

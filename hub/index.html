@@ -731,9 +731,9 @@
                     <div class="card-actions">
                         ${isRunning ? `
                             <a href="${p.external_url || ('https://' + window.location.hostname + ':' + (p.external_port || (28443 + idx)))}" target="_blank" class="btn btn-primary">🚀 打开</a>
-                            <button class="btn btn-secondary" title="停止以节省内存" onclick="controlProfile('${p.id}', 'stop')">⏹️ 停止</button>
+                            <button class="btn btn-secondary" title="停止释放内存" onclick="controlProfile('${p.id}', 'stop')">⏹️ 停止</button>
                         ` : `
-                            <button class="btn btn-primary" onclick="controlProfile('${p.id}', 'start')">▶️ 启动</button>
+                            <button class="btn btn-primary" onclick="openAndActivateProfile('${p.id}', '${p.external_url || ('https://' + window.location.hostname + ':' + (p.external_port || (28443 + idx)))}')">🚀 启动并打开</button>
                         `}
                         <button class="btn btn-secondary" title="一键体检测速" onclick="probeProfile('${p.id}')">⚡ 体检</button>
                         <button class="btn btn-secondary" title="云剪贴板" onclick="openClipboardModal('${p.id}')">📋</button>
@@ -837,6 +837,31 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = "立即创建并部署";
+            }
+        }
+
+        // 智能激活并直达打开
+        async function openAndActivateProfile(id, url) {
+            const btn = event.currentTarget;
+            const origText = btn.innerHTML;
+            btn.innerHTML = "⏳ 启动中...";
+            try {
+                const res = await fetch('/api/profiles/action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id, action: 'activate'})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.open(url, '_blank');
+                    await fetchAllProfiles();
+                } else {
+                    alert("启动失败: " + (data.message || data.error));
+                }
+            } catch(e) {
+                alert("网络请求异常: " + e.message);
+            } finally {
+                btn.innerHTML = origText;
             }
         }
 
