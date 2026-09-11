@@ -83,13 +83,38 @@ def remove_profile_from_compose(acc_id):
     if not os.path.exists(compose_file):
         return
     with open(compose_file, "r", encoding="utf-8") as f:
-        text = f.read()
+        lines = f.readlines()
 
-    pattern = rf"(?m)^\s*(?:#\s*账号\s+{re.escape(acc_id)}\s*\n)?\s*browser-{re.escape(acc_id)}:\s*\n(?:[ \t]+[^\n]*\n)*"
-    new_text = re.sub(pattern, "", text)
+    target_service = f"browser-{acc_id}:"
+    new_lines = []
+    skip = False
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        # 检查是否为该服务块的注释头（如 # 账号 xxx）
+        if not skip and acc_id in line and stripped.startswith("#"):
+            is_header = False
+            for forward_line in lines[i+1:i+4]:
+                if target_service in forward_line:
+                    is_header = True
+                    break
+            if is_header:
+                continue
+
+        if target_service in stripped and not stripped.startswith("#"):
+            skip = True
+            continue
+
+        if skip:
+            # 遇到下一个同级服务或顶级服务定义时退出跳过
+            if re.match(r'^\s{2}[a-zA-Z0-9_-]+:', line) or (not line.startswith(" ") and stripped):
+                skip = False
+            else:
+                continue
+
+        new_lines.append(line)
 
     with open(compose_file, "w", encoding="utf-8") as f:
-        f.write(new_text)
+        f.writelines(new_lines)
 
 def delete_profile_full(acc_id):
     container = f"browser-{acc_id}"
@@ -168,19 +193,29 @@ def get_profiles():
 
     ok, nginx_files, _ = run_cmd("ls /etc/nginx/sites-available/browser-* 2>/dev/null")
     nginx_port_map = {}
+    nginx_internal_port_map = {}
     if ok and nginx_files.strip():
         for nfile in nginx_files.strip().split("\n"):
-            match_acc = re.search(r'browser-(acc[0-9a-zA-Z_-]+)', os.path.basename(nfile))
-            if match_acc:
-                acc_name = match_acc.group(1)
-                try:
-                    with open(nfile, "r") as nf:
-                        text = nf.read()
-                        port_match = re.search(r'listen\s+([0-9]+)\s+ssl', text)
-                        if port_match:
-                            nginx_port_map[acc_name] = int(port_match.group(1))
-                except Exception:
-                    pass
+            fname = os.path.basename(nfile)
+            if "browser-hub" in fname:
+                continue
+            # 提取账号 ID（去除 browser- 前缀以及后续域名后缀）
+            m = re.search(r'browser-([^.]+)', fname)
+            acc_name = m.group(1) if m else None
+
+            try:
+                with open(nfile, "r") as nf:
+                    text = nf.read()
+                    port_match = re.search(r'listen\s+([0-9]+)\s+ssl', text)
+                    internal_match = re.search(r'proxy_pass\s+http://127\.0\.0\.1:([0-9]+)', text)
+                    if port_match:
+                        ext_p = int(port_match.group(1))
+                        if acc_name:
+                            nginx_port_map[acc_name] = ext_p
+                        if internal_match:
+                            nginx_internal_port_map[int(internal_match.group(1))] = ext_p
+            except Exception:
+                pass
 
     all_groups = set(["全部", "默认分组"])
     blocks = content.split("\n  browser-")
@@ -199,7 +234,7 @@ def get_profiles():
 
         container_name = f"browser-{acc_id}"
         c_info = status_map.get(container_name, {"status": "未运行", "state": "exited"})
-        external_port = nginx_port_map.get(acc_id, 0)
+        external_port = nginx_port_map.get(acc_id) or nginx_internal_port_map.get(internal_port, 0)
         current_domain = load_domain()
 
         meta = get_profile_meta(acc_id)

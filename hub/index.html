@@ -729,10 +729,11 @@
 
                     <!-- 操作工具栏 -->
                     <div class="card-actions">
-                        ${isRunning && p.external_url ? `
-                            <a href="${p.external_url}" target="_blank" class="btn btn-primary">🚀 打开</a>
+                        ${isRunning ? `
+                            <a href="${p.external_url || ('https://' + window.location.hostname + ':' + (p.external_port || (28443 + idx)))}" target="_blank" class="btn btn-primary">🚀 打开</a>
+                            <button class="btn btn-secondary" title="停止以节省内存" onclick="controlProfile('${p.id}', 'stop')">⏹️ 停止</button>
                         ` : `
-                            <button class="btn btn-secondary" onclick="controlProfile('${p.id}', 'start')">▶️ 启动</button>
+                            <button class="btn btn-primary" onclick="controlProfile('${p.id}', 'start')">▶️ 启动</button>
                         `}
                         <button class="btn btn-secondary" title="一键体检测速" onclick="probeProfile('${p.id}')">⚡ 体检</button>
                         <button class="btn btn-secondary" title="云剪贴板" onclick="openClipboardModal('${p.id}')">📋</button>
