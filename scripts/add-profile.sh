@@ -190,6 +190,8 @@ cat >> "$BASE_DIR/docker-compose.yml" << ENTRY_EOF
     ports:
       - "127.0.0.1:$NEW_INTERNAL_PORT:3000"
     shm_size: "1gb"
+    mem_limit: 450m
+    cpus: 0.7
     restart: unless-stopped
 ENTRY_EOF
 
